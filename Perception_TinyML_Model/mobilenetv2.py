@@ -327,8 +327,8 @@ class FaceDetectorDemo:
         self.picam2.start()
 
         
-        if not self.cap.isOpened():
-            raise RuntimeError("Failed to open camera!")
+        # if not self.cap.isOpened():
+        #     raise RuntimeError("Failed to open camera!")
         
         # Set camera properties
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
