@@ -319,7 +319,7 @@ class FaceDetectorDemo:
         
         # Initialize camera
         print("\n[2/3] Initializing camera...")
-        self.cap = cv2.VideoCapture('/dev/video0', cv2.CAP_V4L2)
+        self.cap = cv2.VideoCapture('libcamerasrc ! video/x-raw,width=640,height=480 ! appsink', cv2.CAP_GSTREAMER)
         
         if not self.cap.isOpened():
             raise RuntimeError("Failed to open camera!")
