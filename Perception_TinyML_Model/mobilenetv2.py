@@ -320,8 +320,8 @@ class FaceDetectorDemo:
         # Initialize camera
         print("\n[2/3] Initializing camera...")
         self.cap = cv2.VideoCapture(
-    'libcamerasrc ! video/x-raw,width=640,height=480,framerate=30/1 ! '
-    'videoconvert ! video/x-raw,format=BGR ! appsink drop=1',
+    'libcamerasrc ! video/x-raw,width=480,height=360,framerate=15/1,format=RGBx ! '
+    'videoconvert ! video/x-raw,format=BGR ! appsink max-buffers=1 drop=true sync=false',
     cv2.CAP_GSTREAMER
 )
         
@@ -329,9 +329,8 @@ class FaceDetectorDemo:
             raise RuntimeError("Failed to open camera!")
         
         # Set camera properties
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
         
         print("Camera initialized successfully")
         print("\n[3/3] Setup complete!\n")
