@@ -319,7 +319,7 @@ class FaceDetectorDemo:
         
         # Initialize camera
         print("\n[2/3] Initializing camera...")
-        self.cap = cv2.VideoCapture('libcamerasrc ! video/x-raw,width=640,height=480 ! appsink', cv2.CAP_GSTREAMER)
+        self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
         
         if not self.cap.isOpened():
             raise RuntimeError("Failed to open camera!")
@@ -327,6 +327,7 @@ class FaceDetectorDemo:
         # Set camera properties
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
         
         print("Camera initialized successfully")
         print("\n[3/3] Setup complete!\n")
@@ -523,6 +524,17 @@ def main():
         print(f"\nError: {e}")
         import traceback
         traceback.print_exc()
+
+
+#Test script
+for i in range(5):
+    cap = cv2.VideoCapture(i, cv2.CAP_V4L2)
+    if cap.isOpened():
+        ret, frame = cap.read()
+        print(f"Index {i}: opened={cap.isOpened()}, read={ret}")
+        cap.release()
+    else:
+        print(f"Index {i}: failed to open")
 
 
 if __name__ == '__main__':
