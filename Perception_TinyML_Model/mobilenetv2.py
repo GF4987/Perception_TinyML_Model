@@ -331,8 +331,8 @@ class FaceDetectorDemo:
             raise RuntimeError("Failed to open camera!")
         
         # Set camera properties
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
+        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
         
         print("Camera initialized successfully")
         print("\n[3/3] Setup complete!\n")
@@ -454,7 +454,8 @@ class FaceDetectorDemo:
         try:
             while True:
                 # Read frame
-                ret, frame = self.cap.read()
+                frame = self.picam2.capture_array()
+                ret = frame is not None
                 if not ret:
                     print("Failed to read frame")
                     break
@@ -492,7 +493,7 @@ class FaceDetectorDemo:
         finally:
             # Cleanup
             print("\nCleaning up...")
-            self.cap.release()
+            self.picam2.stop()
             cv2.destroyAllWindows()
             
             print("\n" + "=" * 60)
