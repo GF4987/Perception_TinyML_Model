@@ -8,6 +8,7 @@ import numpy as np
 import cv2
 import time
 import os
+from picamera2 import Picamera2
 
 print(f"TensorFlow version: {tf.__version__}")
 print(f"OpenCV version: {cv2.__version__}")
@@ -319,11 +320,12 @@ class FaceDetectorDemo:
         
         # Initialize camera
         print("\n[2/3] Initializing camera...")
-        self.cap = cv2.VideoCapture(
-    'libcamerasrc ! video/x-raw,width=480,height=360,framerate=15/1,format=RGBx ! '
-    'videoconvert ! video/x-raw,format=BGR ! appsink max-buffers=1 drop=true sync=false',
-    cv2.CAP_GSTREAMER
-)
+        self.picam2 = Picamera2()
+        self.picam2.configure(self.picam2.create_preview_configuration(
+    main={"size": (640, 480), "format": "BGR888"}
+))
+        self.picam2.start()
+
         
         if not self.cap.isOpened():
             raise RuntimeError("Failed to open camera!")
