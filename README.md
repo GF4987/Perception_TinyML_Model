@@ -6,7 +6,7 @@
 
 A lightweight computer vision and gesture recognition suite engineered for embedded Raspberry Pi hardware using native `Picamera2` frame acquisition. Developed to enable fast, real-time spatial detection and gesture interaction at the edge.
 
-> **Project Origin:** Created as part of the award-winning **Perception Innovations** team entry for the Purdue ECE Spark Competition (Holographic Display Interface).
+> **Project Origin:** Created as part of the **Perception Innovations** team entry for the Purdue ECE Spark Competition (Holographic Display Interface).
 
 ---
 
