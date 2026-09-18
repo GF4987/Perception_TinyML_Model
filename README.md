@@ -4,7 +4,7 @@
 [![Computer Vision](https://img.shields.io/badge/OpenCV-4.x-green.svg)](https://opencv.org/)
 [![Framework](https://img.shields.io/badge/TensorFlow-2.x-orange.svg)](https://tensorflow.org/)
 
-A lightweight computer vision and gesture recognition suite engineered for embedded Raspberry Pi hardware using native `Picamera2` integration. Developed to enable fast, real-time spatial detection and interaction at the edge.
+A lightweight computer vision and gesture recognition suite engineered for embedded Raspberry Pi hardware using native `Picamera2` frame acquisition. Developed to enable fast, real-time spatial detection and gesture interaction at the edge.
 
 > **Project Origin:** Created as part of the award-winning **Perception Innovations** team entry for the Purdue ECE Spark Competition (Holographic Display Interface).
 
@@ -12,80 +12,93 @@ A lightweight computer vision and gesture recognition suite engineered for embed
 
 ## Repository Overview & File Comparison
 
-This repository houses two complementary vision pipelines and a dependencies manifest. Dedicated register-level hardware drivers and firmware for external microcontrollers are managed in a separate subsystem repository.
+This repository consists strictly of two standalone Python vision pipelines utilizing `Picamera2` for hardware-accelerated camera capture at $640 \times 480$ resolution (`BGR888`).
 
 ### File Breakdowns
 
-* **`tinyml_face_detection.py`**
-  * **Core Focus:** Neural network-based facial landmark and object detection.
-  * **Architecture:** Builds a custom MobileNetV2 backbone with Single Shot MultiBox Detector (SSD) prediction heads using TensorFlow/Keras.
-  * **Functionality:** Ingests live frame arrays from `Picamera2`, preprocesses image matrices to 96x96, and runs anchor box decoding with Non-Maximum Suppression (NMS) to draw localized bounding boxes and confidence scores.
+* **`mobilenetv2.py`**
+  * **Core Focus:** Deep learning-based facial detection engine.
+  * **Architecture:** Custom MobileNetV2 backbone ($\alpha = 0.35$, input shape $96 \times 96 \times 3$) paired with Single Shot MultiBox Detector (SSD) prediction heads implemented in TensorFlow/Keras.
+  * **Pipeline:** 
+    * Captures live frame arrays via `Picamera2.capture_array()`.
+    * Preprocesses frames by resizing to $96 \times 96$ and normalizing pixel values to $[0, 1]$.
+    * Generates anchor boxes matched to output feature maps to evaluate classification and localization predictions.
+    * Decodes predictions and applies Non-Maximum Suppression (NMS) with configurable IoU (`0.4`) and confidence (`0.5`) thresholds.
+  * **UI & Controls:** Displays real-time FPS counter, face count, and annotated bounding boxes. Press `'q'` to quit and display the session summary; press `'s'` to export the current frame as `detected_face_N.jpg`.
 
-* **`index_finger_direction.py`**
-  * **Core Focus:** Low-overhead, heuristic-based spatial orientation tracking.
-  * **Architecture:** Lightweight OpenCV/NumPy pipeline utilizing skin-color segmentation and geometric contour analysis.
-  * **Functionality:** Processes `Picamera2` frames using HSV thresholding, morphological closing/opening, and minimum area bounding rectangles. Computes shape aspect ratios and contour spatial moments to determine pointing vectors (`LEFT` vs `RIGHT`) with runtime trackbar calibration.
-
-* **`requirements.txt`**
-  * Contains the Python dependencies required to run both scripts on Raspberry Pi hardware (e.g., `tensorflow`, `opencv-python`, `numpy`, `scipy`, `pillow`).
+* **`gesture_detect.py`**
+  * **Core Focus:** Low-overhead, heuristic spatial finger tracking and direction detection.
+  * **Architecture:** Lightweight OpenCV/NumPy processing pipeline utilizing HSV skin segmentation, morphological filtering, spatial moments, and temporal history queue smoothing.
+  * **Pipeline:**
+    * Converts `Picamera2` BGR frames to HSV and applies dual-range thresholding to handle red-hue wraparound (checking $170\text{--}179$ when `H low` $\le 10$).
+    * Cleans binary masks using $7 \times 7$ ellipse morphological opening (2 iterations) and closing (3 iterations).
+    * Filters contours by area (`min_area = 3000`) and aspect ratio via `minAreaRect` (`aspect = 1.8`).
+    * Computes spatial centroid using moments ($\frac{M_{10}}{M_{00}}, \frac{M_{01}}{M_{00}}$) and identifies the finger tip as the contour point with maximum Euclidean distance from the centroid.
+    * Evaluates vector direction (`LEFT` vs `RIGHT`) and stabilizes outputs across a temporal queue (`smooth = 9` frames) via majority voting.
+  * **UI & Controls:** Opens dual windows (`Finger Direction` overlay and `Skin Mask + Trackbars`). Press `'q'` to quit; press `'p'` to dump active trackbar parameters to the terminal.
 
 ---
 
 ## System Requirements & Setup
 
 ### Prerequisites
-- Raspberry Pi (with `picamera2` configured)
-- Raspberry Pi Camera Module
+- Raspberry Pi with Pi Camera Module
+- Raspberry Pi OS with `picamera2` configured
 - Python 3.9+
 
-### Installation
+### Installation & Environment Setup
 
 ```bash
 # Clone the repository
 git clone [https://github.com/your-username/perception-tinyml-engine.git](https://github.com/your-username/perception-tinyml-engine.git)
 cd perception-tinyml-engine
 
-# Create virtual environment (inherit system site-packages for picamera2 access)
+# Create virtual environment inheriting system site-packages for Picamera2 access
 python -m venv --system-site-packages venv
 source venv/bin/activate
 
-# Install dependencies
+# Install required packages
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install tensorflow opencv-python numpy
 ```
 
 ---
 
 ## Usage
 
-### Run Face Detection (TinyML)
-Launch the neural network pipeline to perform real-time facial and object detection using the custom MobileNetV2-SSD backbone:
+### 1. Run MobileNetV2 Face Detector
+Launch the deep learning face detection engine:
 
 ```bash
-python tinyml_face_detection.py
+python mobilenetv2.py
 ```
-*Press `q` in the video stream window to terminate the process.*
 
-### Run Index Finger Direction Detector
-Start the low-overhead heuristic spatial tracking pipeline. This script initializes the camera feed alongside an interactive configuration window to fine-tune HSV tracking thresholds for specific lighting conditions.
+* **Interactive Controls:**
+  * `q` — Quit detection and display session summary metrics (frames processed, average FPS, saved frames).
+  * `s` — Save the active annotated frame snapshot to disk (`detected_face_N.jpg`).
+
+---
+
+### 2. Run Index Finger Gesture Detector
+Launch the heuristic finger directional tracker with interactive calibration trackbars:
 
 ```bash
-python index_finger_direction.py
+python gesture_detect.py
 ```
 
-**Calibration & Operation Steps:**
-1. Ensure your hand is well-lit and clearly visible within the camera frame.
-2. Adjust the `H_MIN`, `S_MIN`, and `V_MIN` trackbars in the control window until the binary mask successfully isolates your skin tone from the background noise.
-3. Point your index finger. The terminal will continuously output `LEFT` or `RIGHT` directional vectors based on the geometric contour spatial moments and aspect ratio calculations.
-*Press `q` in the active window to terminate the tracking process.*
+* **Calibration & Operational Workflow:**
+  1. Use the **Skin Mask + Trackbars** window to adjust `H low/high`, `S low/high`, and `V low/high` until your hand appears as a clean white mask.
+  2. Adjust `Min area` and `Aspect x10` to filter out background noise and ensure only elongated finger contours are tracked.
+  3. Point your index finger left or right. The primary window displays directional vectors (`< LEFT` or `RIGHT >`), contour bounds, centroid marker, aspect ratio calculations, and real-time FPS.
+* **Interactive Controls:**
+  * `q` — Quit application.
+  * `p` — Print current trackbar parameters (`params` dictionary) directly to stdout.
 
 ---
 
 ## Performance & Optimization
 
-To achieve stable, real-time frame rates on resource-constrained embedded hardware, this engine employs several strict optimization strategies:
-
-* **Native `Picamera2` Memory Management:** By utilizing `Picamera2`'s direct NumPy array mapping, the pipeline bypasses costly memory-copy operations between the camera module's Image Signal Processor (ISP) and the Python runtime environment.
-* **Algorithmic Triage:** The system splits heavy neural network inferences (`tinyml_face_detection.py`) from lightweight OpenCV heuristics (`index_finger_direction.py`). This allows the hardware to execute the most computationally efficient method required for the immediate interaction context.
-* **Aggressive Downsampling:** Incoming camera frames are structurally downsampled (e.g., to 96x96 matrices for the MobileNetV2 pipeline) prior to analysis, heavily reducing the required FLOPs per frame while preserving localized spatial accuracy.
-* **TensorFlow Lite Readiness:** The SSD architecture is structured to support seamless export to `.tflite` formats, allowing for future INT8 or Float16 integer quantization to further minimize the memory footprint and execution latency at the edge.
+* **Zero-Copy Memory Access:** Uses `Picamera2.capture_array()` across both `mobilenetv2.py` and `gesture_detect.py` to map BGR frames straight to NumPy arrays, avoiding OpenCV `VideoCapture` overhead on Raspberry Pi hardware.
+* **Aggressive Input Downsampling:** Resizes input tensors to $96 \times 96$ within `mobilenetv2.py` to minimize FLOPs and memory overhead during model inference.
+* **Efficient Heuristic Filtering:** `gesture_detect.py` avoids heavy neural network compute by using geometric moment calculations ($M_{10}, M_{01}$) and spatial distance metrics.
+* **Temporal Stabilization:** Uses a rolling buffer (`smooth = 9`) to eliminate single-frame directional flicker without introducing noticeable latency.
